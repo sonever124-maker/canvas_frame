@@ -213,7 +213,7 @@
 
 </div>
 <script>
-const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzGh9nEKr40IOoWtD2Q4fyW0Fl9eKoc3egYMb-GF7e6-IyW3cPmO5-9m2cUBrHAyCY/exec';
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbybJg6kuc1RCBR9Ytxep6HsQaEoOfILDEBYjomanjOoauszFiVWBLp9qbwF7m_hDCc_Cw/exec';
 
 let sheetData = [], sheetLoaded = false;
 
@@ -358,7 +358,7 @@ function dimLine(x1,y1,x2,y2,label,col){
       text-anchor="middle" dominant-baseline="middle" transform="rotate(${da},${tx},${ty})">${label}</text>`;
 }
 
-function submitOrder() {
+async function submitOrder() {
   const name  = document.getElementById('order-name').value.trim();
   const phone = document.getElementById('order-phone').value.trim();
   const qty   = parseInt(document.getElementById('order-qty').value);
@@ -368,12 +368,48 @@ function submitOrder() {
   if (!phone)      { msgEl.textContent='전화번호를 입력해주세요.';    msgEl.className='err'; return; }
   if (!qty||qty<1) { msgEl.textContent='수량을 입력해주세요.';        msgEl.className='err'; return; }
 
+  const w = parseFloat(document.getElementById('width').value);
+  const h = parseFloat(document.getElementById('height').value);
+  const d = parseFloat(document.getElementById('depth').value);
+
   const area = document.getElementById('product-area');
-  const productName  = area.querySelector('.product-name')  ? area.querySelector('.product-name').textContent.replace('📦 ','') : '미지정';
-  const productPrice = area.querySelector('.product-price') ? area.querySelector('.product-price').textContent : '—';
+  const productName = area.querySelector('.product-name')
+    ? area.querySelector('.product-name').textContent.replace('📦 ','').trim()
+    : '미지정';
 
   msgEl.className = '';
-  msgEl.textContent = `✓ 주문 접수! ${name}님 (${phone}) · ${productName} · ${qty}개`;
+  msgEl.textContent = '주문 전송 중…';
+
+  try {
+    const res = await fetch(SHEET_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        phone,
+        qty,
+        productName,
+        width:  isNaN(w) ? '' : w,
+        height: isNaN(h) ? '' : h,
+        depth:  isNaN(d) ? '' : d
+      })
+    });
+    const json = await res.json();
+    if (json.result === 'success') {
+      msgEl.className = '';
+      msgEl.textContent = `✓ 주문 완료! ${name}님 (${phone}) · ${productName} · ${qty}개`;
+      // 입력 초기화
+      document.getElementById('order-name').value = '';
+      document.getElementById('order-phone').value = '';
+      document.getElementById('order-qty').value = '1';
+    } else {
+      throw new Error(json.message || 'error');
+    }
+  } catch(err) {
+    msgEl.className = 'err';
+    msgEl.textContent = '⚠ 주문 전송에 실패했습니다. 다시 시도해주세요.';
+    console.error(err);
+  }
 }
 
 loadSheet();
