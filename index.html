@@ -268,7 +268,13 @@ function showProduct(w, h) {
   if (p) {
     const price = parseInt(p.price, 10);
     const priceStr = isNaN(price) ? p.price : price.toLocaleString('ko-KR') + '원';
-    area.innerHTML = `<div class="product-card"><div class="product-name">📦 ${p.name}</div><div class="product-price">${priceStr}</div></div>`;
+    area.innerHTML = `<div class="product-card">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="product-name">📦 ${p.name}</div>
+        <div style="font-family:'Space Mono',monospace; font-size:11px; color:#9ca3af; font-weight:600;">${p.width} × ${p.height} mm</div>
+      </div>
+      <div class="product-price">${priceStr}</div>
+    </div>`;
   } else {
     area.innerHTML = `<div class="product-card not-found"><div class="product-name">⚠ 일치하는 제품 없음</div><div class="product-price">시트를 확인해주세요</div></div>`;
   }
