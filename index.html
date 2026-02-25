@@ -240,7 +240,25 @@ async function loadSheet() {
 }
 
 function findProduct(w, h) {
-  return sheetData.find(r => parseFloat(r.width) === w && parseFloat(r.height) === h) || null;
+  const TOLERANCE = 5; // ±5mm 허용
+  // 1순위: 정확히 일치
+  const exact = sheetData.find(r => parseFloat(r.width) === w && parseFloat(r.height) === h);
+  if (exact) return exact;
+  // 2순위: ±5mm 이내에서 가장 가까운 항목
+  const candidates = sheetData.filter(r => {
+    const rw = parseFloat(r.width);
+    const rh = parseFloat(r.height);
+    return Math.abs(rw - w) <= TOLERANCE && Math.abs(rh - h) <= TOLERANCE;
+  });
+  if (candidates.length === 0) return null;
+  // 거리가 가장 가까운 항목 반환
+  return candidates.reduce((best, r) => {
+    const rw = parseFloat(r.width), rh = parseFloat(r.height);
+    const dist = Math.abs(rw - w) + Math.abs(rh - h);
+    const bestW = parseFloat(best.width), bestH = parseFloat(best.height);
+    const bestDist = Math.abs(bestW - w) + Math.abs(bestH - h);
+    return dist < bestDist ? r : best;
+  });
 }
 
 function showProduct(w, h) {
