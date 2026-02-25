@@ -286,11 +286,18 @@ function calculate() {
     return;
   }
 
-  const rw = isNaN(w) ? null : w + 30;
-  const rh = isNaN(h) ? null : h + 30;
+  // 가로가 세로보다 작으면 자동으로 교환
+  let adjW = isNaN(w) ? null : w;
+  let adjH = isNaN(h) ? null : h;
+  if (adjW !== null && adjH !== null && adjW < adjH) {
+    [adjW, adjH] = [adjH, adjW];
+  }
+
+  const rw = adjW === null ? null : adjW + 30;
+  const rh = adjH === null ? null : adjH + 30;
   const rd = isNaN(d) ? null : d + 17;
 
-  showProduct(isNaN(w) ? null : w, isNaN(h) ? null : h);
+  showProduct(adjW, adjH);
   resultEl.innerHTML = `<div id="diagram-wrap">${drawDiagram(rw, rh, rd)}</div>`;
 }
 
