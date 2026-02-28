@@ -245,25 +245,37 @@ async function loadSheet() {
 }
 
 function findProduct(w, h) {
-  const TOLERANCE = 5; // ±5mm 허용
-  // 1순위: 정확히 일치
-  const exact = sheetData.find(r => parseFloat(r.width) === w && parseFloat(r.height) === h);
-  if (exact) return exact;
-  // 2순위: ±5mm 이내에서 가장 가까운 항목
-  const candidates = sheetData.filter(r => {
-    const rw = parseFloat(r.width);
-    const rh = parseFloat(r.height);
-    return Math.abs(rw - w) <= TOLERANCE && Math.abs(rh - h) <= TOLERANCE;
+  const TOLERANCE = 5;
+
+  // 1) 가로·세로 ±5mm 이내 → 정확 매칭 (변형 없음)
+  const exact = sheetData.find(r =>
+    Math.abs(parseFloat(r.width) - w) <= TOLERANCE &&
+    Math.abs(parseFloat(r.height) - h) <= TOLERANCE
+  );
+  if (exact) return { ...exact, variant: false };
+
+  // 2) 대각선 기반 매칭
+  // 입력값의 대각선 길이 계산
+  const inputDiag = Math.sqrt(w * w + h * h);
+
+  // 시트의 각 행 대각선 계산 (diagonal 컬럼 우선, 없으면 width·height로 계산)
+  const withDiag = sheetData.map(r => {
+    const diag = parseFloat(r.diagonal) || Math.sqrt(parseFloat(r.width) ** 2 + parseFloat(r.height) ** 2);
+    return { ...r, _diag: diag };
   });
-  if (candidates.length === 0) return null;
-  // 거리가 가장 가까운 항목 반환
-  return candidates.reduce((best, r) => {
-    const rw = parseFloat(r.width), rh = parseFloat(r.height);
-    const dist = Math.abs(rw - w) + Math.abs(rh - h);
-    const bestW = parseFloat(best.width), bestH = parseFloat(best.height);
-    const bestDist = Math.abs(bestW - w) + Math.abs(bestH - h);
-    return dist < bestDist ? r : best;
-  });
+
+  // 입력 대각선보다 작거나 같은 항목 중 가장 큰 것 선택 (근접한 작은 값)
+  const smaller = withDiag
+    .filter(r => r._diag <= inputDiag)
+    .sort((a, b) => b._diag - a._diag);
+
+  if (smaller.length > 0) return { ...smaller[0], variant: true };
+
+  // 모두 입력값보다 크면 가장 작은 항목
+  const fallback = withDiag.sort((a, b) => a._diag - b._diag);
+  if (fallback.length > 0) return { ...fallback[0], variant: true };
+
+  return null;
 }
 
 function showProduct(w, h) {
@@ -273,9 +285,13 @@ function showProduct(w, h) {
   if (p) {
     const price = parseInt(p.price, 10);
     const priceStr = isNaN(price) ? p.price : price.toLocaleString('ko-KR') + '원';
+    const displayName = p.variant ? `${p.name} 변형` : p.name;
+    const nameBadge = p.variant
+      ? `<span style="background:#fff3cd;color:#856404;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:4px;">변형</span>`
+      : '';
     area.innerHTML = `<div class="product-card">
-      <div style="display:flex; align-items:center; gap:8px;">
-        <div class="product-name">📦 ${p.name}</div>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <div class="product-name">📦 ${p.name}${nameBadge}</div>
         <div style="font-family:'Space Mono',monospace; font-size:11px; color:#9ca3af; font-weight:600;">${p.width} × ${p.height} mm</div>
       </div>
       <div class="product-price">${priceStr}</div>
@@ -413,8 +429,9 @@ async function submitOrder() {
   if (!qty||qty<1)         { msgEl.textContent='수량을 입력해주세요.'; msgEl.className='err'; return; }
 
   const area = document.getElementById('product-area');
-  const productName = area.querySelector('.product-name')
-    ? area.querySelector('.product-name').textContent.replace('📦 ','').trim()
+  const nameEl = area.querySelector('.product-name');
+  const productName = nameEl
+    ? nameEl.textContent.replace('📦 ','').replace('변형','').trim() + (nameEl.querySelector('span') ? ' 변형' : '')
     : '미지정';
 
   msgEl.className = '';
