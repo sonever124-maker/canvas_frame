@@ -264,15 +264,15 @@ function findProduct(w, h) {
     return { ...r, _diag: diag };
   });
 
-  // 입력 대각선보다 작거나 같은 항목 중 가장 큰 것 선택 (근접한 작은 값)
-  const smaller = withDiag
-    .filter(r => r._diag <= inputDiag)
-    .sort((a, b) => b._diag - a._diag);
+  // 입력 대각선보다 크거나 같은 항목 중 가장 작은 것 선택 (근접한 큰 값)
+  const larger = withDiag
+    .filter(r => r._diag >= inputDiag)
+    .sort((a, b) => a._diag - b._diag);
 
-  if (smaller.length > 0) return { ...smaller[0], variant: true };
+  if (larger.length > 0) return { ...larger[0], variant: true };
 
-  // 모두 입력값보다 크면 가장 작은 항목
-  const fallback = withDiag.sort((a, b) => a._diag - b._diag);
+  // 모두 입력값보다 작으면 가장 큰 항목
+  const fallback = withDiag.sort((a, b) => b._diag - a._diag);
   if (fallback.length > 0) return { ...fallback[0], variant: true };
 
   return null;
